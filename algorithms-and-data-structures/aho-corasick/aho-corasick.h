@@ -1,8 +1,10 @@
+#include <fmt/os.h>
+
 #include <memory>
 #include <queue>
 #include <string>
 #include <vector>
-using std::shared_ptr;
+
 #define s_ptr shared_ptr
 
 using std::unique_ptr;
@@ -11,23 +13,26 @@ using std::unique_ptr;
 using std::weak_ptr;
 #define w_ptr weak_ptr
 
+#define SIZE_OF_ALPHABET 256
+
 using std::queue;
 using std::string;
 using std::vector;
 
 class TrieNode {
    public:
-    u_ptr<TrieNode> children[26];
+    u_ptr<TrieNode> children[SIZE_OF_ALPHABET];
     TrieNode* fail_link;
     TrieNode* dict_link;
     bool end_of_word;
     int idx_of_word;
+    int id;
 
     TrieNode();
 };
 
 inline TrieNode::TrieNode() {
-    for (int i = 0; i < 26; ++i) {
+    for (int i = 0; i < SIZE_OF_ALPHABET; ++i) {
         children[i] = nullptr;
     }
 
@@ -35,23 +40,29 @@ inline TrieNode::TrieNode() {
     dict_link = nullptr;
     end_of_word = 0;
     idx_of_word = -1;
+    id = -1;
 }
 
 class Trie {
    private:
     vector<string> all_words;
     u_ptr<TrieNode> Root;
+    int number_of_nodes = 1;
 
    public:
-    Trie() : Root(std::make_unique<TrieNode>()) {}
+    Trie() : Root(std::make_unique<TrieNode>()) {
+        Root.get()->id = 1;
+    }
     Trie(std::vector<std::string> patterns);
     void insert(string word);
     void build_failed_links();
     vector<std::pair<int, int> > find_occurences(string text);
+    void make_dot_file(string FileName);
 };
 
 inline Trie::Trie(std::vector<std::string> patterns) {
     Root = std::make_unique<TrieNode>();
+    Root->id = 1;
     for (auto word : patterns) {
         insert(word);
     }
@@ -60,10 +71,14 @@ inline Trie::Trie(std::vector<std::string> patterns) {
 inline void Trie::insert(string word) {
     TrieNode* cur = Root.get();
     for (char c : word) {
-        if (cur->children[c - 'a'] == nullptr) {
-            cur->children[c - 'a'] = std::make_unique<TrieNode>();
+        if (cur->children[c] == nullptr) {
+            cur->children[c] = std::make_unique<TrieNode>();
         }
-        cur = cur->children[c - 'a'].get();
+        cur = cur->children[c].get();
+        if (cur->id == -1) {
+            number_of_nodes++;
+            cur->id = number_of_nodes;
+        }
     }
 
     cur->end_of_word = true;
@@ -74,7 +89,7 @@ inline void Trie::insert(string word) {
 inline void Trie::build_failed_links() {
     Root->fail_link = Root.get();
     queue<TrieNode*> q;
-    for (int i = 0; i < 26; ++i) {
+    for (int i = 0; i < SIZE_OF_ALPHABET; ++i) {
         if (Root->children[i]) {
             Root->children[i]->fail_link = Root.get();
             q.push(Root->children[i].get());
@@ -84,7 +99,7 @@ inline void Trie::build_failed_links() {
     while (!q.empty()) {
         TrieNode* cur = q.front();
         q.pop();
-        for (int i = 0; i < 26; ++i) {
+        for (int i = 0; i < SIZE_OF_ALPHABET; ++i) {
             TrieNode* child = cur->children[i].get();
             if (child) {
                 q.push(child);
@@ -116,11 +131,11 @@ inline vector<std::pair<int, int> > Trie::find_occurences(string text) {
     vector<std::pair<int, int> > answer;
     for (int i = 0; i < text.size(); ++i) {
         char c = text[i];
-        while (cur->children[c - 'a'] == nullptr && cur != Root.get()) {
+        while (cur->children[c] == nullptr && cur != Root.get()) {
             cur = cur->fail_link;
         }
-        if (cur->children[c - 'a']) {
-            cur = cur->children[c - 'a'].get();
+        if (cur->children[c]) {
+            cur = cur->children[c].get();
         }
 
         if (cur->end_of_word) {
@@ -135,4 +150,47 @@ inline vector<std::pair<int, int> > Trie::find_occurences(string text) {
         }
     }
     return answer;
+}
+
+inline void Trie::make_dot_file(string FileName) {
+    auto out = fmt::output_file(FileName);
+    out.print("digraph G {{\n");
+    out.print("    layout=dot;\n");
+    out.print("    nodesep=0.7;\n");
+    out.print("    ranksep=0.8;\n");
+    out.print("    node [shape=circle, fontname=\"Helvetica\", width=0.4, fixedsize=true];\n\n");
+
+    queue<TrieNode*> q;
+    q.push(Root.get());
+
+    while (q.size()) {
+        TrieNode* cur = q.front();
+        q.pop();
+        if (cur->end_of_word) {
+            out.print("    {} [shape=doublecircle, fillcolor=\"#1fc713ff\", style=filled, label=\"{}\"];\n", cur->id, cur->id);
+        } else {
+            out.print("    {} [label=\"{}\"];\n", cur->id, cur->id);
+        }
+        for (int i = 0; i < SIZE_OF_ALPHABET; ++i) {
+            if (cur->children[i]) q.push(cur->children[i].get());
+        }
+    }
+
+    q.push(Root.get());
+
+    while (q.size()) {
+        TrieNode* cur = q.front();
+        q.pop();
+        for (int i = 0; i < SIZE_OF_ALPHABET; ++i) {
+            if (cur->children[i]) {
+                q.push(cur->children[i].get());
+
+                out.print("    {} -> {} [color=\"#0055ff\", penwidth=2, fontsize=12, label=\" {} \"];\n", cur->id, cur->children[i]->id, char(i));
+            }
+        }
+        if (cur->fail_link && cur->fail_link != Root.get()) out.print("    {} -> {} [color=red,style=dotted,constraint=false,dir=forward,penwidth=1.5];\n", cur->id, cur->fail_link->id);
+        if (cur->dict_link) out.print("    {} -> {} [color=\"#8e10aeff\",style=dotted,constraint=false,dir=forward,penwidth=1.5];\n", cur->id, cur->dict_link->id);
+    }
+
+    out.print("}}\n");
 }

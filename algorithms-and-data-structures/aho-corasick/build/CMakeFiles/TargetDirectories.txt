@@ -1,0 +1,3 @@
+/home/viodem/Coding_Folder/different_problems/university-lectures/algorithms-and-data-structures/aho-corasick/build/CMakeFiles/aho_corasick.dir
+/home/viodem/Coding_Folder/different_problems/university-lectures/algorithms-and-data-structures/aho-corasick/build/CMakeFiles/edit_cache.dir
+/home/viodem/Coding_Folder/different_problems/university-lectures/algorithms-and-data-structures/aho-corasick/build/CMakeFiles/rebuild_cache.dir
