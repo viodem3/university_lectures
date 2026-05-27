@@ -1,8 +1,0 @@
-[
-{
-  "directory": "/home/viodem/Coding_Folder/different_problems/university-lectures/algorithms-and-data-structures/aho-corasick/build",
-  "command": "/usr/bin/g++ -DFMT_SHARED  -g -std=gnu++20 -o CMakeFiles/aho_corasick.dir/source.cpp.o -c /home/viodem/Coding_Folder/different_problems/university-lectures/algorithms-and-data-structures/aho-corasick/source.cpp",
-  "file": "/home/viodem/Coding_Folder/different_problems/university-lectures/algorithms-and-data-structures/aho-corasick/source.cpp",
-  "output": "CMakeFiles/aho_corasick.dir/source.cpp.o"
-}
-]
