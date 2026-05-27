@@ -3,5 +3,5 @@ a.out
 *.o
 .gdb_history
 core
-/build
+build/
 
