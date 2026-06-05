@@ -1,30 +1,22 @@
 # Aho-Corasick Automaton with DFA Optimization
 
-This repository contains a clean, modern **C++20** object-oriented implementation of the **Aho-Corasick algorithm**.
+A modern **C++20** implementation of the **Aho-Corasick multi-pattern string matching algorithm**.
 
-The implementation transitions from a standard trie with failure links to a fully flat **Deterministic Finite Automaton (DFA)**, ensuring strictly **O(1)** time complexity per character during text streaming.
+The project builds a classical Aho-Corasick automaton and transforms it into a fully deterministic finite automaton (DFA) by precomputing all failure transitions. This allows pattern matching to be performed using a single state transition per input character, making the implementation well-suited for high-throughput text processing and streaming applications.
 
-Additionally, the project includes built-in support for exporting the automaton structure into Graphviz `.dot` files for easy visualization.
+The project also includes Graphviz export functionality for visualizing the automaton structure, failure links, and dictionary links.
 
 ---
 
 ## Features
 
-- **Strict O(1) Processing per Character**
-  
-  Eliminates runtime fallback loops (link climbing) by flattening transitions using Dynamic Programming (`upgrade_failed_links`).
-
-- **Clean Object-Oriented Design**
-  
-  Avoids global matrices or hardcoded state limits common in competitive programming. Each `TrieNode` dynamically encapsulates its own routing table.
-
-- **Memory Safe (RAII)**
-  
-  Uses `std::unique_ptr` for automated and safe tree memory management.
-
-- **Graphviz Integration**
-  
-  Generates `.dot` visualization graphs showing trie edges, failure links, and dictionary links.
+- Classical Aho-Corasick trie construction
+- Failure-link and dictionary-link generation
+- DFA optimization through precomputed transitions
+- Constant-time state transitions during text processing
+- Object-oriented C++20 design
+- Automatic memory management using `std::unique_ptr`
+- Graphviz `.dot` export for automaton visualization
 
 ---
 
@@ -32,66 +24,68 @@ Additionally, the project includes built-in support for exporting the automaton 
 
 | File | Description |
 |--------|-------------|
-| `aho-corasick.h` | Core header file containing definitions for `TrieNode` and the `Trie` class. |
-| `source.cpp` | Example entry point initializing the trie, building links, and generating a `.dot` export file. |
-| `CMakeLists.txt` | Modern CMake configuration script (requires `{fmt}` library). |
-| `Aho-Corasick Automaton Optimization.pdf` | Accompanying technical presentation slides. |
+| `aho-corasick.h` | Core implementation of the trie, automaton construction, and search algorithms |
+| `source.cpp` | Example program demonstrating automaton construction and visualization |
+| `CMakeLists.txt` | CMake build configuration |
+| `Aho-Corasick Automaton Optimization.pdf` | Technical presentation describing the optimization process |
 
 ---
 
 ## Technical Overview
 
-### 1. Classic Structure vs. Optimized DFA
+### DFA Optimization
 
-In a standard Aho-Corasick implementation, handling a character mismatch forces the state machine to iteratively traverse back via `fail_link` paths. In the worst case, this results in multiple random memory lookups per symbol.
+A standard Aho-Corasick automaton resolves missing transitions by repeatedly following failure links until a valid transition is found.
 
-By calling `upgrade_failed_links()`, the lookup paths are precalculated and flattened into the `go` transition table for each node:
+After calling:
 
 ```cpp
-// Fully optimized O(1) state transition
+upgrade_failed_links();
+```
+
+all fallback transitions are precomputed and stored directly inside the transition table of every state.
+
+As a result, state updates during pattern matching become:
+
+```cpp
 cur = cur->go[c];
 ```
 
----
+eliminating runtime failure-link traversal.
 
-### 2. Time & Space Complexity
+### Complexity
+
+Let:
+
+- `m` be the total length of all patterns,
+- `Σ = 256` be the alphabet size,
+- `n` be the length of the processed text.
 
 | Operation | Complexity |
 |------------|------------|
-| Automaton preprocessing | **O(m × Σ)** |
-| Memory usage | **O(m × Σ)** |
-| Stream text search | **O(n)** |
+| Automaton construction | O(m) |
+| DFA transition completion | O(m × Σ) |
+| Memory usage | O(m × Σ) |
+| Pattern matching | O(n) |
 
-Where:
-
-- `m` = total length of all patterns
-- `Σ` = alphabet size (`256`)
-- `n` = length of the searched text
-
-This makes the implementation particularly suitable for live, non-backtracking network data streams.
+After preprocessing, every input character requires exactly one transition lookup.
 
 ---
 
-## Getting Started
+## Building
 
-### Prerequisites
+### Requirements
 
-- A **C++20** compatible compiler (GCC, Clang, or MSVC)
-- **CMake** version 3.15 or newer
-- **{fmt}** library
+- C++20 compatible compiler
+- CMake 3.15 or newer
+- `{fmt}` library
 
-### Building the Project
-
-#### Clone the repository
+### Compilation
 
 ```bash
 git clone https://github.com/your-username/your-repo-name.git
 cd your-repo-name
-```
 
-#### Create a build directory and compile
-
-```bash
 mkdir build
 cd build
 
@@ -99,7 +93,7 @@ cmake ..
 make
 ```
 
-#### Run the executable
+### Running
 
 ```bash
 ./aho_corasick
@@ -109,31 +103,26 @@ make
 
 ## Visualization
 
-The method:
+The method
 
 ```cpp
 make_dot_file(std::string file_name);
 ```
 
-writes a Graphviz `.dot` representation of the automaton.
+exports the automaton into a Graphviz `.dot` file.
 
-To render the graph into a PNG image:
+To generate an image:
 
 ```bash
-dot -Tpng test1.dot -o automaton.png
+dot -Tpng automaton.dot -o automaton.png
 ```
 
-### Color Codes in Exported Graphs
+### Graph Legend
 
-| Color / Style | Meaning |
-|---------------|----------|
-| 🔵 Blue solid arrows | Standard trie prefix edges (`children`) |
-| 🔴 Red dotted arrows | Suffix failure links (`fail_link`) |
-| 🟣 Purple dotted arrows | Compressed dictionary paths (`dict_link`) |
-| 🟢 Green double circles | Valid end-of-word matching states |
+| Element | Description |
+|----------|-------------|
+| Blue edges | Trie transitions |
+| Red dotted edges | Failure links |
+| Purple dotted edges | Dictionary links |
+| Green double circles | Terminal states |
 
----
-
-## License
-
-This project is open-source and available under the **MIT License**.
